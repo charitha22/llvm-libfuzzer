@@ -1,9 +1,8 @@
 // C program for insertion sort
 #include <stdio.h>
 #include <math.h>
-
 int comps = 0;
-
+#define SIZE 20
 /* Function to sort an array using insertion sort*/
 void insertionSort(int arr[], int n)
 {
@@ -40,25 +39,27 @@ void printArray(int arr[], int n)
 /* Driver program to test insertion sort */
 int isort_driver(const uint8_t * data, size_t size)
 {
+    if(size!=SIZE) return -1;
+    
     comps = 0;
 
-    printf("Size of data = %zu\n", size);
+    printf("size of data = %zu\n", size);
     int i = 0;
-    int sortarray[20]; 
+    int sortarray[size]; 
     
     while (i < size) {
        sortarray[i]= (int) *(data++);
        i++;
     } 
 
- 
-    insertionSort(sortarray, 20);
-    printArray(sortarray, 20);
+    printArray(sortarray, size);
+    insertionSort(sortarray, size);
+    printArray(sortarray, size);
     printf("comps: %d\n", comps);
 
-    if (comps == 10*19) {
-       return 1;
-    }
+    //if (comps == 10*19) {
+       //return 1;
+    //}
     return 0;
 }
 
