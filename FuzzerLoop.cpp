@@ -616,7 +616,8 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
 
 void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
-
+  // Chairtha
+  Corpus.PrintFeatureSet();
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
   if (Options.UseFeatureFrequency)
     Corpus.UpdateFeatureFrequencyScore(&II);
@@ -737,6 +738,14 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
 
 void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
   ReadAndExecuteSeedCorpora(CorpusDirs);
+  // charitha : if prediction read in the prediction
+  if(Options.PredictionMode){
+      PredFile.Parse("pred.in");
+      TPC.CopyCounters(PredFile.GetDiffCounters());
+      PredFile.ComputeDiffs();
+      TPC.SetPredictor(&PredFile);
+  }
+  //exit(1);
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();

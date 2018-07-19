@@ -38,6 +38,8 @@ thread_local uintptr_t __sancov_lowest_stack;
 namespace fuzzer {
 
 TracePC TPC;
+// Charitha
+PredictionParser PredFile;
 
 int ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr;
 

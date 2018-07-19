@@ -17,9 +17,10 @@
 #include "FuzzerValueBitMap.h"
 
 #include <set>
-
+#include <map>
+#include <string>
+#include <fstream>
 namespace fuzzer {
-
 // TableOfRecentCompares (TORC) remembers the most recently performed
 // comparisons of type T.
 // We record the arguments of CMP instructions in this table unconditionally
@@ -67,7 +68,61 @@ struct MemMemTable {
   }
 };
 
+// Chairtha : use to parse in the prediction
+class PredictionParser{
+public:
+    uint8_t getCount(int idx) { 
+        auto II = EdgeCounts.find(idx);
+        if(II != EdgeCounts.end()) return II->second;
+        return 0; // might be a problem
+    }
+
+    void Parse(const char * filename){
+        EdgeCounts.clear();
+        std::ifstream infile(filename);
+        int edge, count;
+        while(infile >> edge >> count){
+            EdgeCounts[edge] = (uint8_t)count;
+
+        }
+        //DumpPrediction();
+    }
+
+    void DumpPrediction() {
+        for(auto II : EdgeCounts) 
+            Printf("Edge : %d Count : %d\n", II.first, II.second);
+    }
+
+    void ComputeDiffs(){
+        ClearCounters(); 
+        //TPC.CopyCounters(DiffCounters());
+        for(auto II : EdgeCounts){
+            int edge = II.first;
+            uint8_t prediction = II.second;
+            
+            DiffCounters[edge] = prediction > DiffCounters[edge] ? prediction-DiffCounters[edge] : DiffCounters[edge] - prediction ;
+            //Printf("Actual Count : %d\n", DiffCounters[edge]);
+            //Printf("Predicted count : %d\n", prediction);
+            //Printf("Edge : %d Diff : %d\n", edge, DiffCounters[edge]);
+        }
+    }
+
+    uint8_t* GetDiffCounters() { return DiffCounters;}
+    void ClearCounters() { 
+        for(int i=0; i < diffCounterSize; i++) DiffCounters[i] = 0;
+    }
+
+    
+private:
+    static const size_t diffCounterSize = 1 << 21;
+    std::map<int, uint8_t> EdgeCounts;
+    uint8_t DiffCounters[diffCounterSize];
+};
+
+
+
 class TracePC {
+
  public:
   static const size_t kNumPCs = 1 << 21;
   // How many bits of PC are used from __sanitizer_cov_trace_pc.
@@ -132,7 +187,13 @@ class TracePC {
       CB(PC);
   }
 
+  // charitha TODO : this memcpy can be dangerous
+  void CopyCounters(uint8_t * Diffs) { memcpy(Diffs, Counters(), 1<<21);}
+  void SetPredictor(PredictionParser * pf) { PF = pf;}
 private:
+
+  PredictionParser * PF = 0;
+
   bool UseCounters = false;
   bool UseValueProfile = false;
   bool UseClangCoverage = false;
@@ -167,7 +228,25 @@ private:
 
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack;
+
 };
+
+class UniqueEdges {
+public :
+    // Charitha 
+    std::set<std::pair<int, int>> UniqueEdgeCounts;
+
+    // Charitha
+    void AddUniqueEdge(int edge, int count){
+      UniqueEdgeCounts.insert(std::pair<int, int>(edge, count));
+    }
+    void DumpUniqueEdges(){
+      Printf("EDGES touched so far : \n");
+      for(auto II : UniqueEdgeCounts)
+          Printf("EDGE ID : %d\t Count : %d\n", II.first, II.second);
+    }
+};
+
 
 template <class Callback>
 // void Callback(size_t FirstFeature, size_t Idx, uint8_t Value);
@@ -180,20 +259,24 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
   auto P = Begin;
   // Iterate by 1 byte until either the alignment boundary or the end.
   for (; reinterpret_cast<uintptr_t>(P) & StepMask && P < End; P++)
-    if (uint8_t V = *P)
+    if (uint8_t V = *P){
       Handle8bitCounter(FirstFeature, P - Begin, V);
+    }
 
   // Iterate by Step bytes at a time.
   for (; P < End; P += Step)
     if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P))
       for (size_t I = 0; I < Step; I++, Bundle >>= 8)
-        if (uint8_t V = Bundle & 0xff)
+        if (uint8_t V = Bundle & 0xff){
           Handle8bitCounter(FirstFeature, P - Begin + I, V);
+        }
 
   // Iterate by 1 byte until the end.
   for (; P < End; P++)
-    if (uint8_t V = *P)
+    if (uint8_t V = *P){
       Handle8bitCounter(FirstFeature, P - Begin, V);
+    }
+
 }
 
 // Given a non-zero Counter returns a number in the range [0,7].
@@ -222,6 +305,20 @@ unsigned CounterToFeature(T Counter) {
     return Bit;
 }
 
+template<class T>
+unsigned DiffCounterToFeature(T Counter) {
+    unsigned Bit = 0;
+    /**/ if (Counter >= 128) Bit = 7;
+    else if (Counter >= 32) Bit = 6;
+    else if (Counter >= 16) Bit = 5;
+    else if (Counter >= 8) Bit = 4;
+    else if (Counter >= 4) Bit = 3;
+    else if (Counter >= 3) Bit = 2;
+    else if (Counter >= 2) Bit = 1;
+    return Bit;
+}
+
+
 template <class Callback>  // void Callback(size_t Feature)
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 __attribute__((noinline))
@@ -235,12 +332,27 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
     else
       HandleFeature(FirstFeature + Idx);
   };
+  auto Handle8bitDiffCounter = [&](size_t FirstFeature,
+                               size_t Idx, uint8_t Counter) {
+    unsigned bit = DiffCounterToFeature(Counter);
+    for(int i=0; bit<=7; bit++){
+        HandleFeature(FirstFeature + Idx * 8 + i);
+    }
+  };
+
 
   size_t FirstFeature = 0;
 
   if (!NumInline8bitCounters) {
     ForEachNonZeroByte(Counters, Counters + N, FirstFeature, Handle8bitCounter);
     FirstFeature += N * 8;
+  }
+
+  // Charitha : experimental , for each edge take the diff from a target count
+  // and use that as a feature
+  if(PF){
+      ForEachNonZeroByte(PF->GetDiffCounters(), PF->GetDiffCounters()+N, FirstFeature, Handle8bitDiffCounter);
+      FirstFeature += N*8;
   }
 
   if (NumInline8bitCounters) {
@@ -286,12 +398,15 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   assert(StackDepthStepFunction(1024 * 4) == 80);
   assert(StackDepthStepFunction(1024 * 1024) == 144);
 
+  // Charitha : need to profile stack depth for this branch to take.
   if (auto MaxStackOffset = GetMaxStackOffset())
     HandleFeature(FirstFeature + StackDepthStepFunction(MaxStackOffset / 8));
+
+
 }
 
 extern TracePC TPC;
-
+extern PredictionParser PredFile;
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_TRACE_PC

@@ -590,6 +590,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.TraceMalloc = Flags.trace_malloc;
   Options.RssLimitMb = Flags.rss_limit_mb;
   Options.MallocLimitMb = Flags.malloc_limit_mb;
+ 
+  Options.PredictionMode = Flags.pred_mode;
   if (!Options.MallocLimitMb)
     Options.MallocLimitMb = Options.RssLimitMb;
   if (Flags.runs >= 0)

@@ -188,6 +188,7 @@ class InputCorpus {
       Printf("EVICTED %zd\n", Idx);
   }
 
+  // TODO Charitha : We will add based on our prediction
   bool AddFeature(size_t Idx, uint32_t NewSize, bool Shrink) {
     assert(NewSize);
     Idx = Idx % kFeatureSetSize;
@@ -232,7 +233,7 @@ class InputCorpus {
 
 private:
 
-  static const bool FeatureDebug = false;
+  static const bool FeatureDebug = true;
 
   size_t GetFeature(size_t Idx) const { return InputSizesPerFeature[Idx]; }
 
@@ -256,6 +257,7 @@ private:
   // Hypothesis: units added to the corpus last are more interesting.
   //
   // Hypothesis: inputs with infrequent features are more interesting.
+  // TODO Charitha : this may need to change
   void UpdateCorpusDistribution() {
     size_t N = Inputs.size();
     assert(N);
