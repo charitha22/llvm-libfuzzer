@@ -233,7 +233,7 @@ class InputCorpus {
 
 private:
 
-  static const bool FeatureDebug = true;
+  static const bool FeatureDebug = false;
 
   size_t GetFeature(size_t Idx) const { return InputSizesPerFeature[Idx]; }
 

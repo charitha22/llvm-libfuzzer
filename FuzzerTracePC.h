@@ -94,8 +94,6 @@ public:
     }
 
     void ComputeDiffs(){
-        ClearCounters(); 
-        //TPC.CopyCounters(DiffCounters());
         for(auto II : EdgeCounts){
             int edge = II.first;
             uint8_t prediction = II.second;
@@ -110,6 +108,13 @@ public:
     uint8_t* GetDiffCounters() { return DiffCounters;}
     void ClearCounters() { 
         for(int i=0; i < diffCounterSize; i++) DiffCounters[i] = 0;
+    }
+
+    int ComputeDistance() {
+        int dist = 0;
+        for (int i=0; i < diffCounterSize; i++) dist += DiffCounters[i]*DiffCounters[i];
+
+        return dist;
     }
 
     
@@ -188,7 +193,7 @@ class TracePC {
   }
 
   // charitha TODO : this memcpy can be dangerous
-  void CopyCounters(uint8_t * Diffs) { memcpy(Diffs, Counters(), 1<<21);}
+  void CopyCounters(uint8_t * Diffs) const { memcpy(Diffs, Counters(), 1<<21);}
   void SetPredictor(PredictionParser * pf) { PF = pf;}
 private:
 
@@ -305,18 +310,6 @@ unsigned CounterToFeature(T Counter) {
     return Bit;
 }
 
-template<class T>
-unsigned DiffCounterToFeature(T Counter) {
-    unsigned Bit = 0;
-    /**/ if (Counter >= 128) Bit = 7;
-    else if (Counter >= 32) Bit = 6;
-    else if (Counter >= 16) Bit = 5;
-    else if (Counter >= 8) Bit = 4;
-    else if (Counter >= 4) Bit = 3;
-    else if (Counter >= 3) Bit = 2;
-    else if (Counter >= 2) Bit = 1;
-    return Bit;
-}
 
 
 template <class Callback>  // void Callback(size_t Feature)
@@ -334,9 +327,9 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   };
   auto Handle8bitDiffCounter = [&](size_t FirstFeature,
                                size_t Idx, uint8_t Counter) {
-    unsigned bit = DiffCounterToFeature(Counter);
-    for(int i=0; bit<=7; bit++){
-        HandleFeature(FirstFeature + Idx * 8 + i);
+    unsigned bit = CounterToFeature(Counter);
+    for(int i=bit; i<=7; i++){
+        HandleFeature(FirstFeature + Idx * 8 + bit);
     }
   };
 
@@ -351,6 +344,9 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   // Charitha : experimental , for each edge take the diff from a target count
   // and use that as a feature
   if(PF){
+      // compute diff now : might be slow
+      CopyCounters(PF->GetDiffCounters());
+      PF->ComputeDiffs();
       ForEachNonZeroByte(PF->GetDiffCounters(), PF->GetDiffCounters()+N, FirstFeature, Handle8bitDiffCounter);
       FirstFeature += N*8;
   }

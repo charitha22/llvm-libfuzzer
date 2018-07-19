@@ -741,11 +741,8 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
   // charitha : if prediction read in the prediction
   if(Options.PredictionMode){
       PredFile.Parse("pred.in");
-      TPC.CopyCounters(PredFile.GetDiffCounters());
-      PredFile.ComputeDiffs();
       TPC.SetPredictor(&PredFile);
   }
-  //exit(1);
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();
