@@ -442,6 +442,10 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   UniqFeatureSetTmp.clear();
   size_t FoundUniqFeaturesOfII = 0;
   size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
+
+  // charitha
+  if(Options.PredictionMode) TPC.ComputeDiffs(); 
+
   TPC.CollectFeatures([&](size_t Feature) {
     if (Options.UseFeatureFrequency)
       Corpus.UpdateFeatureFrequency(Feature);
@@ -616,8 +620,6 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
 
 void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
-  // Chairtha
-  Corpus.PrintFeatureSet();
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
   if (Options.UseFeatureFrequency)
     Corpus.UpdateFeatureFrequencyScore(&II);
@@ -737,12 +739,11 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
 }
 
 void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
-  ReadAndExecuteSeedCorpora(CorpusDirs);
   // charitha : if prediction read in the prediction
   if(Options.PredictionMode){
-      PredFile.Parse("pred.in");
-      TPC.SetPredictor(&PredFile);
+      TPC.ParsePredFile("pred.in");
   }
+  ReadAndExecuteSeedCorpora(CorpusDirs);
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();
@@ -779,7 +780,6 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
 
     // Perform several mutations and runs.
     MutateAndTestOne();
-
     PurgeAllocator();
   }
 

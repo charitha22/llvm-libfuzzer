@@ -27,6 +27,12 @@
 // experiments with inlined instrumentation.
 alignas(64) ATTRIBUTE_INTERFACE
 uint8_t __sancov_trace_pc_guard_8bit_counters[fuzzer::TracePC::kNumPCs];
+// charitha : Introduce a 32 bit counter
+alignas(64) ATTRIBUTE_INTERFACE
+uint32_t __sancov_trace_pc_guard_32bit_counters[fuzzer::TracePC::kNumPCs];
+
+alignas(64) uint32_t DiffCounters[fuzzer::TracePC::kNumPCs];
+
 
 ATTRIBUTE_INTERFACE
 uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
@@ -38,10 +44,70 @@ thread_local uintptr_t __sancov_lowest_stack;
 namespace fuzzer {
 
 TracePC TPC;
-// Charitha
-PredictionParser PredFile;
+
 
 int ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr;
+
+//charitha
+void TracePC::ParsePredFile(const char* filename){
+    PredMode = true;
+    PredEdgeCounts.clear();
+    std::ifstream infile(filename);
+    unsigned edge, count;
+    while(infile >> edge >> count){
+        PredEdgeCounts[edge] = (uint32_t)count;
+
+    }
+}
+
+void TracePC::DumpPrediction() {
+    for(auto II : PredEdgeCounts) 
+        Printf("Edge : %d Count : %d\n", II.first, II.second);
+}
+
+void TracePC::ComputeDiffs()  {
+    ClearDiffCounters();
+
+    // TODO : What about the edges that are not in prediction but are taken 
+    // by the current input? Currently ignoring them i.e. not adding any features
+    for(auto II : PredEdgeCounts){
+        unsigned edge = II.first;
+        uint32_t prediction = II.second;
+        
+        DiffCounters[edge] = prediction > Counters32Bit()[edge] ? prediction-Counters32Bit()[edge] 
+                                                                : Counters32Bit()[edge] - prediction ;
+        //Printf("Actual Count 32 bit : %d\n", Counters32Bit()[edge]);
+        //Printf("Actual Count 8 bit : %d\n", Counters()[edge]);
+        //Printf("Predicted count : %d\n", prediction);
+        //Printf("Edge : %d Diff : %d\n", edge, DiffCounters[edge]);
+    }
+}
+
+
+// this computes how close the current input is to the prediction
+// TODO : Is Euclidean distance the correct meassure?
+unsigned  TracePC::ComputeDistance() {
+    int dist = 0;
+    for (int i=0; i < fuzzer::TracePC::kNumPCs; i++) dist += DiffCounters[i]*DiffCounters[i];
+
+    return dist;
+}
+
+uint32_t* TracePC::GetDiffCounters() const{
+    return DiffCounters;
+}
+
+void TracePC::ClearDiffCounters() { 
+    for(int i=0; i < fuzzer::TracePC::kNumPCs; i++) DiffCounters[i] = 0;
+}
+
+void TracePC::Clear32BitCounters() {
+    for(int i=0; i < fuzzer::TracePC::kNumPCs; i++) Counters32Bit()[i] = 0;
+}
+
+uint32_t *TracePC::Counters32Bit()  const {
+    return __sancov_trace_pc_guard_32bit_counters;
+}
 
 uint8_t *TracePC::Counters() const {
   return __sancov_trace_pc_guard_8bit_counters;
@@ -381,6 +447,7 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
   uint32_t Idx = *Guard;
   __sancov_trace_pc_pcs[Idx] = PC;
   __sancov_trace_pc_guard_8bit_counters[Idx]++;
+  __sancov_trace_pc_guard_32bit_counters[Idx]++;
 }
 
 // Best-effort support for -fsanitize-coverage=trace-pc, which is available
@@ -392,6 +459,7 @@ void __sanitizer_cov_trace_pc() {
   uintptr_t Idx = PC & (((uintptr_t)1 << fuzzer::TracePC::kTracePcBits) - 1);
   __sancov_trace_pc_pcs[Idx] = PC;
   __sancov_trace_pc_guard_8bit_counters[Idx]++;
+  __sancov_trace_pc_guard_32bit_counters[Idx]++;
 }
 
 ATTRIBUTE_INTERFACE
