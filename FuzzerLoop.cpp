@@ -445,8 +445,15 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
 
   // charitha
   if(Options.PredictionMode) TPC.ComputeDiffs(); 
+  size_t MaxEdgeFeature = TPC.GetMaxEdgeFeature(); // Max feature for Cov
+  size_t MaxDiffFeature = TPC.GetMaxDiffFeature(); // Max feature for Diff
+  unsigned CovFeatures = 0, DiffFeatures = 0; // Used for reweighting units
 
   TPC.CollectFeatures([&](size_t Feature) {
+    // Charitha : hack to biase the inputs
+    if (Feature < MaxEdgeFeature) CovFeatures++;
+    else if ( Feature < MaxDiffFeature) DiffFeatures++;
+
     if (Options.UseFeatureFrequency)
       Corpus.UpdateFeatureFrequency(Feature);
     if (Corpus.AddFeature(Feature, Size, Options.Shrink))
@@ -463,7 +470,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   if (NumNewFeatures) {
     TPC.UpdateObservedPCs();
     Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
-                       UniqFeatureSetTmp);
+                       UniqFeatureSetTmp, CovFeatures, DiffFeatures);
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
@@ -739,9 +746,13 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
 }
 
 void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
+  // charitha : hack to fix a possible bug
+  if(Options.UseFeatureFrequency) Corpus.SetUseFeatureFrequency();
   // charitha : if prediction read in the prediction
   if(Options.PredictionMode){
       TPC.ParsePredFile("pred.in");
+      Corpus.SetPredMode();
+      Corpus.SetMaxEdgeFeature(TPC.GetMaxEdgeFeature());
   }
   ReadAndExecuteSeedCorpora(CorpusDirs);
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);

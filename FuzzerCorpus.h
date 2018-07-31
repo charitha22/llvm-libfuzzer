@@ -37,6 +37,7 @@ struct InputInfo {
   bool Reduced = false;
   Vector<uint32_t> UniqFeatureSet;
   float FeatureFrequencyScore = 1.0;
+  float DiffScore = 1.0;
 };
 
 class InputCorpus {
@@ -73,7 +74,7 @@ class InputCorpus {
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   const Vector<uint32_t> &FeatureSet) {
+                   const Vector<uint32_t> &FeatureSet, int NumCovFeatures, int NumDiffFeatures) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -83,6 +84,12 @@ class InputCorpus {
     II.NumFeatures = NumFeatures;
     II.MayDeleteFile = MayDeleteFile;
     II.UniqFeatureSet = FeatureSet;
+    
+    // charitha : hack
+    if(UseFeatureFrequency) UpdateFeatureFrequencyScore(&II); 
+    // charitha : actvated only on pred mode
+    if(PredMode) II.DiffScore = ComputeDiffScore(NumCovFeatures, NumDiffFeatures);
+    
     std::sort(II.UniqFeatureSet.begin(), II.UniqFeatureSet.end());
     ComputeSHA1(U.data(), U.size(), II.Sha1);
     Hashes.insert(Sha1ToString(II.Sha1));
@@ -90,6 +97,17 @@ class InputCorpus {
     PrintCorpus();
     // ValidateFeatureSet();
   }
+  // TODO : What's a good metric here
+  void SetMaxEdgeFeature(size_t MaxCov) { MaxCovFeatures = MaxCov;}
+  void SetPredMode() { PredMode = true;}
+  float ComputeDiffScore(unsigned  NumCovFeatures, unsigned NumDiffFeatures){
+    float score = 0.10 * ((float)NumCovFeatures)/MaxCovFeatures + 0.90 * ((float)NumDiffFeatures)/(MaxCovFeatures) ;
+    Printf("Num Cov F : %d MaxCov F : %d Num Diff F : %d Max Diff F : %d score : %f\n", 
+            NumCovFeatures, MaxCovFeatures, NumDiffFeatures, 2*MaxCovFeatures, score);
+    return score;
+  }
+
+  bool SetUseFeatureFrequency() { UseFeatureFrequency = true;}
 
   // Debug-only
   void PrintUnit(const Unit &U) {
@@ -232,8 +250,13 @@ class InputCorpus {
   size_t NumFeatureUpdates() const { return NumUpdatedFeatures; }
 
 private:
+  
+  //Charitha : used for computing diff score
+  size_t MaxCovFeatures = 1;
+  bool PredMode = false;
+  bool UseFeatureFrequency = false;
 
-  static const bool FeatureDebug = false;
+  static const bool FeatureDebug = true;
 
   size_t GetFeature(size_t Idx) const { return InputSizesPerFeature[Idx]; }
 
@@ -266,7 +289,7 @@ private:
     std::iota(Intervals.begin(), Intervals.end(), 0);
     for (size_t i = 0; i < N; i++)
       Weights[i] = Inputs[i]->NumFeatures
-                       ? (i + 1) * Inputs[i]->FeatureFrequencyScore
+                       ? sqrt((double)(i + 1)) * Inputs[i]->FeatureFrequencyScore * Inputs[i]->DiffScore
                        : 0.;
     if (FeatureDebug) {
       for (size_t i = 0; i < N; i++)

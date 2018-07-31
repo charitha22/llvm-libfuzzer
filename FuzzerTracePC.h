@@ -197,8 +197,8 @@ class TracePC {
       CB(PC);
   }
 
-  // charitha TODO : this memcpy can be dangerous
-  //void SetPredictor(PredictionParser * pf) { PF = pf;}
+  // Charitha : Difference from a traget edge profile is computed
+  // to guide fuzzing
   void ParsePredFile(const char* filename);
   uint32_t* GetDiffCounters() const;
 
@@ -207,12 +207,14 @@ class TracePC {
   void DumpPrediction();
   void ComputeDiffs();
   unsigned ComputeDistance();
+  
+  // Chairtha : TODO edit these functions when moving to a 32 bit counter
+  size_t GetMaxEdgeFeature() { return 8*(GetNumPCs()-1); }
+  size_t  GetMaxDiffFeature() { return 2*GetMaxEdgeFeature();}
 private:
 
-  //PredictionParser * PF = 0;
   bool PredMode = false;
   std::map<unsigned, uint32_t> PredEdgeCounts;  // map to store the predicted edge counts
-  //uint32_t DiffCounters[fuzzer::TracePC::kNumPCs];
 
   bool UseCounters = false;
   bool UseValueProfile = false;
