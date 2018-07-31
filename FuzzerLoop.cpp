@@ -755,6 +755,11 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
       Corpus.SetMaxEdgeFeature(TPC.GetMaxEdgeFeature());
   }
   ReadAndExecuteSeedCorpora(CorpusDirs);
+  // charitha : hack to check the generated inputs
+  if(Options.ExecuteCorpusOnly){
+      Printf("Only corpus inputs were executed. Exiting.\n");
+      exit(1);
+  }
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();
@@ -793,6 +798,9 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
     MutateAndTestOne();
     PurgeAllocator();
   }
+    
+  // charitha : If timed out dump the best inputs
+  if(Options.PredictionMode) Corpus.WriteBestInputs();
 
   PrintStats("DONE  ", "\n");
   MD.PrintRecommendedDictionary();

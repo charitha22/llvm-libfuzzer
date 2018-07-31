@@ -74,7 +74,7 @@ class InputCorpus {
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   const Vector<uint32_t> &FeatureSet, int NumCovFeatures, int NumDiffFeatures) {
+                   const Vector<uint32_t> &FeatureSet, unsigned NumCovFeatures, unsigned NumDiffFeatures) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -96,6 +96,29 @@ class InputCorpus {
     UpdateCorpusDistribution();
     PrintCorpus();
     // ValidateFeatureSet();
+    // charitha : keep trakc of best inputs
+    if(PredMode) AddToBestInputs(II, NumDiffFeatures);
+  }
+
+  // charitha : best inputs are based on number of diff features only
+  void AddToBestInputs(InputInfo& II, unsigned NumDiffFeatures){
+      if(BestInputs.size() < NumBestInputs){
+          BestInputs.insert(std::pair<unsigned, InputInfo*>(NumDiffFeatures, &II));
+          return;
+      }
+      if(NumDiffFeatures > BestInputs.begin()->first) {
+          BestInputs.erase(BestInputs.begin());
+          BestInputs.insert(std::pair<unsigned, InputInfo*>(NumDiffFeatures, &II));
+      }
+
+  }
+  void WriteBestInputs(){
+    for(auto II : BestInputs){
+        unsigned score = II.first;
+        InputInfo* I = II.second;
+        std::string filename("best_input_"+std::to_string(score)+".out");
+        WriteToFile(I->U, filename);
+    }
   }
   // TODO : What's a good metric here
   void SetMaxEdgeFeature(size_t MaxCov) { MaxCovFeatures = MaxCov;}
@@ -255,6 +278,8 @@ private:
   size_t MaxCovFeatures = 1;
   bool PredMode = false;
   bool UseFeatureFrequency = false;
+  std::map<size_t, InputInfo*> BestInputs; // keep track of best inputs found so far 
+  int NumBestInputs = 5; 
 
   static const bool FeatureDebug = true;
 

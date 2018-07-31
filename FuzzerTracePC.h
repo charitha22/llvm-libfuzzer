@@ -347,6 +347,7 @@ unsigned CounterToFeature(T Counter) {
     return Bit;
 }
 
+// charitha : TODO this has to change after moving to 32 bits
 template<class T>
 unsigned DiffCounterToFeature(T Counter) {
     unsigned Bit = 0;
@@ -377,6 +378,7 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
                                size_t Idx, uint8_t Counter) {
     unsigned bit = DiffCounterToFeature(Counter);
     //Printf("Bit = %d\n", bit);
+    // charitha : TODO number 7 need to go
     for(int i=bit; i<=7; i++){
         HandleFeature(FirstFeature + Idx * 8 + i);
     }

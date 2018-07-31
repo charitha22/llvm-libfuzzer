@@ -40,6 +40,9 @@ std::string DirName(const std::string &FileName);
 // Returns path to a TmpDir.
 std::string TmpDir();
 
+// Chairtha
+void MakeDirectory(const std::string &Path);
+
 bool IsInterestingCoverageFile(const std::string &FileName);
 
 void DupAndCloseStderr();

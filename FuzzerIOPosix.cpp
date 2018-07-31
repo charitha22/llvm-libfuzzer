@@ -39,6 +39,11 @@ static bool IsDirectory(const std::string &Path) {
   return S_ISDIR(St.st_mode);
 }
 
+void MakeDirectory(const std::string &Path){
+    assert(!IsDirectory(Path) && "Directory already exists");
+    mkdir(Path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+}
+
 size_t FileSize(const std::string &Path) {
   struct stat St;
   if (stat(Path.c_str(), &St))
