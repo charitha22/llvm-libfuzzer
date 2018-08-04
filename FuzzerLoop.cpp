@@ -451,8 +451,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
 
   TPC.CollectFeatures([&](size_t Feature) {
     // Charitha : hack to biase the inputs
-    if (Feature < MaxEdgeFeature) CovFeatures++;
-    else if ( Feature < MaxDiffFeature) DiffFeatures++;
+    if (Feature <= MaxEdgeFeature) CovFeatures++;
+    else if ( Feature <= MaxDiffFeature) DiffFeatures++;
 
     if (Options.UseFeatureFrequency)
       Corpus.UpdateFeatureFrequency(Feature);

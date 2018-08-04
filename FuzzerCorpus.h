@@ -97,7 +97,7 @@ class InputCorpus {
     PrintCorpus();
     // ValidateFeatureSet();
     // charitha : keep trakc of best inputs
-    if(PredMode) AddToBestInputs(II, NumDiffFeatures);
+    if(PredMode)    AddToBestInputs(II, NumDiffFeatures);
   }
 
   // charitha : best inputs are based on number of diff features only

@@ -209,7 +209,7 @@ class TracePC {
   unsigned ComputeDistance();
   
   // Chairtha : TODO edit these functions when moving to a 32 bit counter
-  size_t GetMaxEdgeFeature() { return 8*(GetNumPCs()-1); }
+  size_t GetMaxEdgeFeature() { return 8*GetNumPCs(); }
   size_t  GetMaxDiffFeature() { return 2*GetMaxEdgeFeature();}
 private:
 
@@ -284,6 +284,7 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
   for (; reinterpret_cast<uintptr_t>(P) & StepMask && P < End; P++)
     if (uint8_t V = *P){
       //Printf(" E:%d C:%d\n", P-Begin, V);
+      //Printf("%d %d\n", P-Begin, V);
       Handle8bitCounter(FirstFeature, P - Begin, V);
     }
 
@@ -293,6 +294,7 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
       for (size_t I = 0; I < Step; I++, Bundle >>= 8)
         if (uint8_t V = Bundle & 0xff){
           //Printf(" E:%d C:%d\n", P-Begin+I, V);
+          //Printf("%d %d\n", P-Begin+I, V);
           Handle8bitCounter(FirstFeature, P - Begin + I, V);
         }
 
@@ -300,17 +302,20 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
   for (; P < End; P++)
     if (uint8_t V = *P){
       //Printf(" E:%d C:%d\n", P-Begin, V);
+      //Printf("%d %d\n", P-Begin, V);
       Handle8bitCounter(FirstFeature, P - Begin, V);
     }
 
 }
+
+
 
 // Charitha : this is a minimal implementation without 
 // considering the speed
 template <class Callback>
 // void Callback(size_t FirstFeature, size_t Idx, uint8_t Value);
 ATTRIBUTE_NO_SANITIZE_ALL
-void ForEachNonZeroFourByte(const uint32_t *Begin,
+void ForEachNonZeroFourByteDiff(const uint32_t *Begin,
                         size_t FirstFeature, Callback Handle8bitCounter,
                         const std::map<unsigned,uint32_t> EdgeMap) {
     for(auto II : EdgeMap){
@@ -397,7 +402,7 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   // Charitha : experimental , for each edge take the diff from a target count
   // and use that as a feature
   if(PredMode){
-      ForEachNonZeroFourByte(GetDiffCounters(), FirstFeature, Handle8bitDiffCounter, PredEdgeCounts);
+      ForEachNonZeroFourByteDiff(GetDiffCounters(), FirstFeature, Handle8bitDiffCounter, PredEdgeCounts);
       FirstFeature += N*8;
   }
 
