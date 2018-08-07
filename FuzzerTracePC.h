@@ -151,15 +151,14 @@ class TracePC {
 
   void ResetMaps() {
     ValueProfileMap.Reset();
-    if (NumModules)
+    if (NumModules){
       memset(Counters(), 0, GetNumPCs());
+      memset(Counters32Bit(), 0, 4*GetNumPCs());  // charitha
+    }
     ClearExtraCounters();
     ClearInlineCounters();
     if (UseClangCoverage)
       ClearClangCounters();
-    // Charitha
-    if(PredMode)
-      Clear32BitCounters();
   }
 
   void ClearInlineCounters();
@@ -202,14 +201,13 @@ class TracePC {
   void ParsePredFile(const char* filename);
   uint32_t* GetDiffCounters() const;
 
-  void ClearDiffCounters();
-  void Clear32BitCounters();
+  void ClearDiffCounters() { memset(GetDiffCounters(), 0, 4*GetNumPCs());}
   void DumpPrediction();
   void ComputeDiffs();
   unsigned ComputeDistance();
   
   // Chairtha : TODO edit these functions when moving to a 32 bit counter
-  size_t GetMaxEdgeFeature() { return 8*GetNumPCs(); }
+  size_t GetMaxEdgeFeature() { return 32*GetNumPCs(); }
   size_t  GetMaxDiffFeature() { return 2*GetMaxEdgeFeature();}
 private:
 
@@ -308,6 +306,45 @@ void ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
 
 }
 
+// charitha : 32 bit counter treversal considering mem allignments
+template <class Callback>
+// void Callback(size_t FirstFeature, size_t Idx, uint8_t Value);
+ATTRIBUTE_NO_SANITIZE_ALL
+void ForEachNonZeroFourByte(const uint32_t *Begin, const uint32_t *End,
+                        size_t FirstFeature, Callback Handle8bitCounter) {
+  typedef uintptr_t LargeType;
+  const size_t Step = sizeof(LargeType) / sizeof(uint32_t);
+  const size_t StepMask = Step - 1;
+  auto P = Begin;
+  // Iterate by 1 byte until either the alignment boundary or the end.
+  for (; reinterpret_cast<uintptr_t>(P) & StepMask && P < End; P++)
+    if (uint32_t V = *P){
+      //Printf(" E:%d C:%d\n", P-Begin, V);
+      //Printf("%d %d\n", P-Begin, V);
+      Handle8bitCounter(FirstFeature, P - Begin, V);
+    }
+
+  // Iterate by Step bytes at a time.
+  for (; P < End; P += Step)
+    if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P))
+      for (size_t I = 0; I < Step; I++, Bundle >>= 32)
+        if (uint32_t V = Bundle & 0xffffffff){
+          //Printf(" E:%d C:%d\n", P-Begin+I, V);
+          //Printf("%d %d\n", P-Begin+I, V);
+          Handle8bitCounter(FirstFeature, P - Begin + I, V);
+        }
+
+  // Iterate by 1 byte until the end.
+  for (; P < End; P++)
+    if (uint32_t V = *P){
+      //Printf(" E:%d C:%d\n", P-Begin, V);
+      //Printf("%d %d\n", P-Begin, V);
+      Handle8bitCounter(FirstFeature, P - Begin, V);
+    }
+
+}
+
+
 
 
 // Charitha : this is a minimal implementation without 
@@ -365,12 +402,89 @@ unsigned DiffCounterToFeature(T Counter) {
     else if (Counter >= 2) Bit = 1;
     return Bit;
 }
+// Charitha : new counnter structure
+template<class T>
+unsigned CounterToFeature32Bit(T Counter) {
+    assert(Counter);
+    unsigned Bit = 0;
+    if (Counter >= 1600) Bit = 31;
+    else if (Counter >= 1536) Bit = 30;
+    else if (Counter >= 1472) Bit = 29;
+    else if (Counter >= 1408) Bit = 28;
+    else if (Counter >= 1344) Bit = 27;
+    else if (Counter >= 1280) Bit = 26;
+    else if (Counter >= 1216) Bit = 25;
+    else if (Counter >= 1152) Bit = 24;
+    else if (Counter >= 1088) Bit = 23;
+    else if (Counter >= 1024) Bit = 22;
+    else if (Counter >= 960) Bit = 21;
+    else if (Counter >= 896) Bit = 20;
+    else if (Counter >= 832) Bit = 19;
+    else if (Counter >= 768) Bit = 18;
+    else if (Counter >= 704) Bit = 17;
+    else if (Counter >= 640) Bit = 16;
+    else if (Counter >= 576) Bit = 15;
+    else if (Counter >= 512) Bit = 14;
+    else if (Counter >= 448) Bit = 13;
+    else if (Counter >= 384) Bit = 12;
+    else if (Counter >= 320) Bit = 11;
+    else if (Counter >= 256) Bit = 10;
+    else if (Counter >= 192) Bit = 9;
+    else if (Counter >= 128) Bit = 8;
+    else if (Counter >= 64) Bit = 7;
+    else if (Counter >= 32) Bit = 6;
+    else if (Counter >= 16) Bit = 5;
+    else if (Counter >= 8) Bit = 4;
+    else if (Counter >= 4) Bit = 3;
+    else if (Counter >= 3) Bit = 2;
+    else if (Counter >= 2) Bit = 1;
+    return Bit;
+}
+
+template<class T>
+unsigned DiffCounterToFeature32Bit(T Counter) {
+    unsigned Bit = 0;
+    if (Counter >= 1600) Bit = 31;
+    else if (Counter >= 1536) Bit = 30;
+    else if (Counter >= 1472) Bit = 29;
+    else if (Counter >= 1408) Bit = 28;
+    else if (Counter >= 1344) Bit = 27;
+    else if (Counter >= 1280) Bit = 26;
+    else if (Counter >= 1216) Bit = 25;
+    else if (Counter >= 1152) Bit = 24;
+    else if (Counter >= 1088) Bit = 23;
+    else if (Counter >= 1024) Bit = 22;
+    else if (Counter >= 960) Bit = 21;
+    else if (Counter >= 896) Bit = 20;
+    else if (Counter >= 832) Bit = 19;
+    else if (Counter >= 768) Bit = 18;
+    else if (Counter >= 704) Bit = 17;
+    else if (Counter >= 640) Bit = 16;
+    else if (Counter >= 576) Bit = 15;
+    else if (Counter >= 512) Bit = 14;
+    else if (Counter >= 448) Bit = 13;
+    else if (Counter >= 384) Bit = 12;
+    else if (Counter >= 320) Bit = 11;
+    else if (Counter >= 256) Bit = 10;
+    else if (Counter >= 192) Bit = 9;
+    else if (Counter >= 128) Bit = 8;
+    else if (Counter >= 64) Bit = 7;
+    else if (Counter >= 32) Bit = 6;
+    else if (Counter >= 16) Bit = 5;
+    else if (Counter >= 8) Bit = 4;
+    else if (Counter >= 4) Bit = 3;
+    else if (Counter >= 3) Bit = 2;
+    else if (Counter >= 2) Bit = 1;
+    return Bit;
+}
+
+
 
 template <class Callback>  // void Callback(size_t Feature)
 ATTRIBUTE_NO_SANITIZE_ADDRESS
 __attribute__((noinline))
 void TracePC::CollectFeatures(Callback HandleFeature) const {
-  uint8_t *Counters = this->Counters();
+  uint32_t *Counters = this->Counters32Bit();
   size_t N = GetNumPCs();
   auto Handle8bitCounter = [&](size_t FirstFeature,
                                size_t Idx, uint8_t Counter) {
@@ -389,21 +503,41 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
     }
   };
 
+  // charitha : 32 bit counter handlers
+  auto Handle32bitCounter = [&](size_t FirstFeature,
+                               size_t Idx, uint32_t Counter) {
+    if (UseCounters)
+      HandleFeature(FirstFeature + Idx * 32 + CounterToFeature32Bit(Counter));
+    else
+      HandleFeature(FirstFeature + Idx);
+  };
+  auto Handle32bitDiffCounter = [&](size_t FirstFeature,
+                               size_t Idx, uint32_t Counter) {
+    unsigned bit = DiffCounterToFeature32Bit(Counter);
+    //Printf("Bit = %d\n", bit);
+    // charitha : TODO number 7 need to go
+    for(int i=bit; i<=31; i++){
+        HandleFeature(FirstFeature + Idx * 32 + i);
+    }
+  };
+
+
+
 
   size_t FirstFeature = 0;
     
   // Charitha : For now assume there are not inline bit counters
   // Use a map to store indexes of non zero edges
   if (!NumInline8bitCounters) {
-    ForEachNonZeroByte(Counters, Counters + N, FirstFeature, Handle8bitCounter);
-    FirstFeature += N * 8;
+    ForEachNonZeroFourByte(Counters, Counters + N, FirstFeature, Handle32bitCounter);
+    FirstFeature += N * 32;
   }
 
   // Charitha : experimental , for each edge take the diff from a target count
   // and use that as a feature
   if(PredMode){
-      ForEachNonZeroFourByteDiff(GetDiffCounters(), FirstFeature, Handle8bitDiffCounter, PredEdgeCounts);
-      FirstFeature += N*8;
+      ForEachNonZeroFourByteDiff(GetDiffCounters(), FirstFeature, Handle32bitDiffCounter, PredEdgeCounts);
+      FirstFeature += N*32;
   }
 
   if (NumInline8bitCounters) {

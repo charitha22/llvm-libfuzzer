@@ -97,13 +97,13 @@ uint32_t* TracePC::GetDiffCounters() const{
     return DiffCounters;
 }
 
-void TracePC::ClearDiffCounters() { 
-    for(int i=0; i < fuzzer::TracePC::kNumPCs; i++) DiffCounters[i] = 0;
-}
+//void TracePC::ClearDiffCounters() { 
+    //for(int i=0; i < fuzzer::TracePC::kNumPCs; i++) DiffCounters[i] = 0;
+//}
 
-void TracePC::Clear32BitCounters() {
-    for(int i=0; i < fuzzer::TracePC::kNumPCs; i++) Counters32Bit()[i] = 0;
-}
+//void TracePC::Clear32BitCounters() {
+    //for(int i=0; i < fuzzer::TracePC::kNumPCs; i++) Counters32Bit()[i] = 0;
+//}
 
 uint32_t *TracePC::Counters32Bit()  const {
     return __sancov_trace_pc_guard_32bit_counters;
