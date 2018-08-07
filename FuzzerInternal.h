@@ -39,6 +39,7 @@ public:
   void ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs);
   void MinimizeCrashLoop(const Unit &U);
   void RereadOutputCorpus(size_t MaxSize);
+  void ReadSmallScaleInputs();
 
   size_t secondsSinceProcessStartUp() {
     return duration_cast<seconds>(system_clock::now() - ProcessStartTime)

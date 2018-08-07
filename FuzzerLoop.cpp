@@ -710,6 +710,11 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
   uint8_t dummy = 0;
   ExecuteCallback(&dummy, 0);
 
+  // charitha : if in pred mode read in the small scale inputs, mutate them and
+  // add to the seed corpus
+  if(Options.PredictionMode)
+      ReadSmallScaleInputs();
+
   if (SizedFiles.empty()) {
     Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
     Unit U({'\n'}); // Valid ASCII input.
@@ -737,6 +742,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
     }
   }
 
+
   PrintStats("INITED");
   if (Corpus.empty()) {
     Printf("ERROR: no interesting inputs were found. "
@@ -744,6 +750,59 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
     exit(1);
   }
 }
+
+// appends vector 1 to vector 2 and returns its size
+size_t AppendTwoVectors(Vector<uint8_t>& Vec1, Vector<uint8_t>& Vec2, int MaxSize){
+    for(unsigned i=0; i<Vec1.size(); i++) {
+        Vec2.push_back(Vec1[i]);
+        if(Vec2.size() == MaxSize) return MaxSize;
+    }
+    return Vec2.size();
+}
+
+void PrintVector(Vector<uint8_t> & Vec){
+    for(unsigned i=0; i<Vec.size(); i++) Printf("%c", Vec[i]);
+    Printf("\n");
+}
+
+
+// A function to randomly append input vectors
+void Fuzzer::ReadSmallScaleInputs(){
+    // this function should not be run if the MaxInputLen is not set by user!
+    assert(MaxInputLen != 4096 && "Max input length is not set"); // this is a hack
+
+    std::string IntputDir = "./small_scale";
+    Printf("Max input len = %lu\n", MaxInputLen);
+    Vector<SizedFile> Inputs;
+    GetSizedFilesFromDir(IntputDir, &Inputs);
+    Printf("INFO: %lu files found in small_scale dir\n", Inputs.size());
+    if(Inputs.size()){
+        // generate new inputs 
+        Vector<uint8_t> CopyTo;
+        for(auto &SF : Inputs){
+            CopyTo = Vector<uint8_t>();
+            auto U = FileToVector(SF.File, MaxInputLen, false);
+            size_t NewSize = AppendTwoVectors(U, CopyTo, MaxInputLen);
+             
+            while(NewSize<MaxInputLen){
+                size_t Idx = MD.GetRand()(Inputs.size());
+                //Printf("Stitching with input at index %lu\n", Idx);
+                auto RandUnit = FileToVector(Inputs[Idx].File, MaxInputLen, false);
+                NewSize = AppendTwoVectors(RandUnit, CopyTo, MaxInputLen);
+                //Printf("Newsize  = %lu\n", NewSize);
+            }
+
+            // Run with this input
+            RunOne(CopyTo.data(), CopyTo.size());
+            CheckExitOnSrcPosOrItem();
+            TryDetectingAMemoryLeak(CopyTo.data(), CopyTo.size(),
+                              /*DuringInitialCorpusExecution*/ true);
+                
+        }
+    }
+    
+}
+
 
 void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
   // charitha : hack to fix a possible bug
