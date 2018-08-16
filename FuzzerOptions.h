@@ -72,6 +72,7 @@ struct FuzzingOptions {
   // Charitha
   bool PredictionMode = false;
   bool ExecuteCorpusOnly = false;
+  bool ReadSmallScale = false;
 };
 
 }  // namespace fuzzer

@@ -20,6 +20,10 @@
 #include <map>
 #include <string>
 #include <fstream>
+
+// Charitha : for debgging
+#define EDGE_DEBUG 0
+
 namespace fuzzer {
 // TableOfRecentCompares (TORC) remembers the most recently performed
 // comparisons of type T.
@@ -320,7 +324,7 @@ void ForEachNonZeroFourByte(const uint32_t *Begin, const uint32_t *End,
   for (; reinterpret_cast<uintptr_t>(P) & StepMask && P < End; P++)
     if (uint32_t V = *P){
       //Printf(" E:%d C:%d\n", P-Begin, V);
-      //Printf("%d %d\n", P-Begin, V);
+      if(EDGE_DEBUG) Printf("%d %d\n", P-Begin, V);
       Handle8bitCounter(FirstFeature, P - Begin, V);
     }
 
@@ -330,7 +334,7 @@ void ForEachNonZeroFourByte(const uint32_t *Begin, const uint32_t *End,
       for (size_t I = 0; I < Step; I++, Bundle >>= 32)
         if (uint32_t V = Bundle & 0xffffffff){
           //Printf(" E:%d C:%d\n", P-Begin+I, V);
-          //Printf("%d %d\n", P-Begin+I, V);
+          if(EDGE_DEBUG) Printf("%d %d\n", P-Begin+I, V);
           Handle8bitCounter(FirstFeature, P - Begin + I, V);
         }
 
@@ -338,7 +342,7 @@ void ForEachNonZeroFourByte(const uint32_t *Begin, const uint32_t *End,
   for (; P < End; P++)
     if (uint32_t V = *P){
       //Printf(" E:%d C:%d\n", P-Begin, V);
-      //Printf("%d %d\n", P-Begin, V);
+      if(EDGE_DEBUG) Printf("%d %d\n", P-Begin, V);
       Handle8bitCounter(FirstFeature, P - Begin, V);
     }
 
@@ -358,7 +362,7 @@ void ForEachNonZeroFourByteDiff(const uint32_t *Begin,
     for(auto II : EdgeMap){
         //Printf("DIFF E:%d D:%d\n", II.first, *(Begin + II.first));
         uint32_t V = *(Begin+II.first);
-        Handle8bitCounter(FirstFeature, II.first, (uint8_t)V);
+        Handle8bitCounter(FirstFeature, II.first, (uint32_t)V);
     }
 }
 

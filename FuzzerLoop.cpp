@@ -712,7 +712,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
 
   // charitha : if in pred mode read in the small scale inputs, mutate them and
   // add to the seed corpus
-  if(Options.PredictionMode)
+  if(Options.ReadSmallScale)
       ReadSmallScaleInputs();
 
   if (SizedFiles.empty()) {
@@ -859,7 +859,7 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
   }
     
   // charitha : If timed out dump the best inputs
-  if(Options.PredictionMode) Corpus.WriteBestInputs();
+  //if(Options.PredictionMode) Corpus.WriteBestInputs();
 
   PrintStats("DONE  ", "\n");
   MD.PrintRecommendedDictionary();

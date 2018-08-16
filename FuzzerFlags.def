@@ -151,3 +151,4 @@ FUZZER_FLAG_INT(use_feature_frequency, 0, "Experimental/internal")
 // Charitha
 FUZZER_FLAG_INT(pred_mode, 0, "Prediction Mode for Worst Case inputs")
 FUZZER_FLAG_INT(exec_corpus_only, 0, "Execute corpus and exit")
+FUZZER_FLAG_INT(read_small_scale, 0, "Splice small scale inputs together")

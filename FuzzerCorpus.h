@@ -104,21 +104,23 @@ class InputCorpus {
   void AddToBestInputs(InputInfo& II, unsigned NumDiffFeatures){
       if(BestInputs.size() < NumBestInputs){
           BestInputs.insert(std::pair<unsigned, InputInfo*>(NumDiffFeatures, &II));
+          WriteInput(II, NumDiffFeatures);
           return;
       }
       if(NumDiffFeatures > BestInputs.begin()->first) {
           BestInputs.erase(BestInputs.begin());
           BestInputs.insert(std::pair<unsigned, InputInfo*>(NumDiffFeatures, &II));
+          WriteInput(II, NumDiffFeatures);
       }
 
   }
-  void WriteBestInputs(){
-    for(auto II : BestInputs){
-        unsigned score = II.first;
-        InputInfo* I = II.second;
+  void WriteInput(InputInfo& I, int score){
+    //for(auto II : BestInputs){
+        //unsigned score = II.first;
+        //InputInfo* I = II.second;
         std::string filename("best_input_"+std::to_string(score)+".out");
-        WriteToFile(I->U, filename);
-    }
+        WriteToFile(I.U, filename);
+    //}
   }
   // TODO : What's a good metric here
   void SetMaxEdgeFeature(size_t MaxCov) { MaxCovFeatures = MaxCov;}
@@ -281,7 +283,7 @@ private:
   std::map<size_t, InputInfo*> BestInputs; // keep track of best inputs found so far 
   int NumBestInputs = 5; 
 
-  static const bool FeatureDebug = true;
+  static const bool FeatureDebug = false;
 
   size_t GetFeature(size_t Idx) const { return InputSizesPerFeature[Idx]; }
 
