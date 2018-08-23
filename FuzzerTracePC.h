@@ -22,7 +22,7 @@
 #include <fstream>
 
 // Charitha : for debgging
-#define EDGE_DEBUG 0
+#define EDGE_DEBUG  0
 
 namespace fuzzer {
 // TableOfRecentCompares (TORC) remembers the most recently performed

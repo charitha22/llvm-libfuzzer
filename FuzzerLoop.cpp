@@ -712,8 +712,9 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
 
   // charitha : if in pred mode read in the small scale inputs, mutate them and
   // add to the seed corpus
-  if(Options.ReadSmallScale)
+  if(Options.UseSmallScale)
       ReadSmallScaleInputs();
+  //}
 
   if (SizedFiles.empty()) {
     Printf("INFO: A corpus is not provided, starting from an empty corpus\n");
@@ -770,7 +771,6 @@ void PrintVector(Vector<uint8_t> & Vec){
 void Fuzzer::ReadSmallScaleInputs(){
     // this function should not be run if the MaxInputLen is not set by user!
     assert(MaxInputLen != 4096 && "Max input length is not set"); // this is a hack
-
     std::string IntputDir = "./small_scale";
     Printf("Max input len = %lu\n", MaxInputLen);
     Vector<SizedFile> Inputs;
