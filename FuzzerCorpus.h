@@ -74,7 +74,8 @@ class InputCorpus {
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                   const Vector<uint32_t> &FeatureSet, unsigned NumCovFeatures, unsigned NumDiffFeatures) {
+                   const Vector<uint32_t> &FeatureSet, unsigned NumCovFeatures, unsigned NumDiffFeatures,
+                   uint64_t Dist, size_t secs) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -97,14 +98,21 @@ class InputCorpus {
     PrintCorpus();
     // ValidateFeatureSet();
     // charitha : keep trakc of best inputs
-    if(PredMode)    AddToBestInputs(II, NumDiffFeatures);
+    if(PredMode)    AddToBestInputs(II, NumDiffFeatures, Dist, secs);
   }
 
+  uint64_t MinDist = 100000000000000;
+  std::map<size_t, uint64_t> DistVsTime;
+
   // charitha : best inputs are based on number of diff features only
-  void AddToBestInputs(InputInfo& II, unsigned NumDiffFeatures){
+  void AddToBestInputs(InputInfo& II, unsigned NumDiffFeatures, uint64_t Dist, size_t secs){
+      if(Dist < MinDist) {
+          DistVsTime.insert(std::pair<size_t, uint64_t>(secs, Dist));
+          MinDist = Dist;
+      }
       if(BestInputs.size() < NumBestInputs){
           BestInputs.insert(std::pair<unsigned, InputInfo*>(NumDiffFeatures, &II));
-          WriteInput(II, NumDiffFeatures);
+          WriteInput(II, NumDiffFeatures), Dist;
           return;
       }
       if(NumDiffFeatures > BestInputs.begin()->first) {
@@ -113,6 +121,19 @@ class InputCorpus {
           WriteInput(II, NumDiffFeatures);
       }
 
+
+  }
+
+  void WriteDistToFile(){
+    std::stringstream ss;
+    for(auto II : DistVsTime){
+        ss << II.first << " " << II.second << "\n";
+
+    }
+    std::string data = ss.str();
+    Vector<uint8_t> str(data.begin(), data.end());
+    std::string filename("dist_vs_time.out");
+    WriteToFile(str, filename);
   }
   void WriteInput(InputInfo& I, int score){
     //for(auto II : BestInputs){
@@ -126,7 +147,7 @@ class InputCorpus {
   void SetMaxEdgeFeature(size_t MaxCov) { MaxCovFeatures = MaxCov;}
   void SetPredMode() { PredMode = true;}
   float ComputeDiffScore(unsigned  NumCovFeatures, unsigned NumDiffFeatures){
-    float score = 0.10 * ((float)NumCovFeatures)/MaxCovFeatures + 0.90 * ((float)NumDiffFeatures)/(MaxCovFeatures) ;
+    float score = 0.5 * ((float)NumCovFeatures)/MaxCovFeatures + 0.5 * ((float)NumDiffFeatures)/(MaxCovFeatures) ;
     Printf("Num Cov F : %d MaxCov F : %d Num Diff F : %d Max Diff F : %d score : %f\n", 
             NumCovFeatures, MaxCovFeatures, NumDiffFeatures, 2*MaxCovFeatures, score);
     return score;

@@ -208,7 +208,7 @@ class TracePC {
   void ClearDiffCounters() { memset(GetDiffCounters(), 0, 4*GetNumPCs());}
   void DumpPrediction();
   void ComputeDiffs();
-  unsigned ComputeDistance();
+  uint64_t ComputeDistance();
   
   // Chairtha : TODO edit these functions when moving to a 32 bit counter
   size_t GetMaxEdgeFeature() { return 32*GetNumPCs(); }

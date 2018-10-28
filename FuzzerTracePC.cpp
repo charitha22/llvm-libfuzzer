@@ -86,8 +86,8 @@ void TracePC::ComputeDiffs()  {
 
 // this computes how close the current input is to the prediction
 // TODO : Is Euclidean distance the correct meassure?
-unsigned  TracePC::ComputeDistance() {
-    int dist = 0;
+uint64_t TracePC::ComputeDistance() {
+    uint64_t dist = 0;
     for (int i=0; i < fuzzer::TracePC::kNumPCs; i++) dist += DiffCounters[i]*DiffCounters[i];
 
     return dist;

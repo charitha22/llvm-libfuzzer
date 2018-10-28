@@ -448,6 +448,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   size_t MaxEdgeFeature = TPC.GetMaxEdgeFeature(); // Max feature for Cov
   size_t MaxDiffFeature = TPC.GetMaxDiffFeature(); // Max feature for Diff
   unsigned CovFeatures = 0, DiffFeatures = 0; // Used for reweighting units
+  uint64_t Edist = TPC.ComputeDistance();
 
   TPC.CollectFeatures([&](size_t Feature) {
     // Charitha : hack to biase the inputs
@@ -470,7 +471,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   if (NumNewFeatures) {
     TPC.UpdateObservedPCs();
     Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
-                       UniqFeatureSetTmp, CovFeatures, DiffFeatures);
+                       UniqFeatureSetTmp, CovFeatures, DiffFeatures, Edist, secondsSinceProcessStartUp());
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
@@ -859,7 +860,7 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
   }
     
   // charitha : If timed out dump the best inputs
-  //if(Options.PredictionMode) Corpus.WriteBestInputs();
+  if(Options.PredictionMode) Corpus.WriteDistToFile();
 
   PrintStats("DONE  ", "\n");
   MD.PrintRecommendedDictionary();
