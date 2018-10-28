@@ -32,6 +32,7 @@ def get_files(dirname):
     
     for t, f in files:
         results.append([t-tzero, f])
+    results.sort()
     return results
 
 def get_num_instructions():
@@ -87,12 +88,13 @@ def read_dir(path):
     result = []
 
     for sdir in subdirs:
-        result.extend(get_files(sdir))
+        result.append(get_files(sdir))
 
-    return sorted(result, key=operator.itemgetter(0))
+    # return sorted(result, key=operator.itemgetter(0))
+    return result
 
-def dump_data_tofile(X, Y, TOOL):
-    f = open(TOOL+".data", "w")
+def dump_data_tofile(X, Y, TOOL, run):
+    f = open(TOOL+"_run"+str(run)+".data", "w")
     assert(len(X) == len(Y))
 
     for i in range(0, len(X)):
@@ -115,10 +117,11 @@ for t in ["x", "slow", "perf"]:
     # sys.exit()
     # for t, f in xdir_files:
         # print t, f
-    xdir_instr_counts = exec_valgrind(xdir_files, tool)
-    [xdata, ydata] = process_info(xdir_instr_counts)
+    for i in range(0, len(xdir_files)):
+        xdir_instr_counts = exec_valgrind(xdir_files[i], tool)
+        [xdata, ydata] = process_info(xdir_instr_counts)
 
-    dump_data_tofile(xdata, ydata, tool)
+        dump_data_tofile(xdata, ydata, tool, i)
 
 sys.exit()
 tool = "slow"

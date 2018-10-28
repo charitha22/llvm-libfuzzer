@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 int comps = 0;
-#define SIZE 20
+#define SIZE 100
 /* Function to sort an array using insertion sort*/
 void insertionSort(int arr[], int n)
 {

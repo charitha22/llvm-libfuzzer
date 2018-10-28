@@ -1,1 +1,1 @@
-numactl -C 0 ./run.sh 
+numactl -C 1 ./run.sh 

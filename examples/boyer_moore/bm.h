@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <klee/klee.h>
 #define SIZE 200
 #define ALPHABET_LEN 256
 #define NOT_FOUND patlen
@@ -140,7 +139,7 @@ void bm_driver(const uint8_t* data, size_t size){
     if(size!=SIZE) return;
     
     uint8_t text[SIZE];
-    for(int i=0; i<SIZE; i++) str[i] = data[i];
+    for(int i=0; i<SIZE; i++) text[i] = data[i];
     
     uint8_t key[3] = {97,98,99}; 
     
